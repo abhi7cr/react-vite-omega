@@ -16,7 +16,7 @@
     "compute": {
       "runtime": "NodeJs-22.x",
       "directory": ".",
-      "entrypoint": "server.js"
+      "entrypoint": "index.js"
     }
   },
   "staticAssets": "public"
