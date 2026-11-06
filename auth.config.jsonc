@@ -8,6 +8,7 @@
   // served from. Do NOT use ["*"], which disables both protections.
   "trustedOrigins": [
     "https://react-vite-omega-latest-test-244545.gamma.omega-test-app.com",
+    "https://harbor-react-vite-omega.gamma.amplify.app",
     "http://localhost:5173"
   ],
 
