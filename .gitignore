@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Amplify Gen 3 backend
+.secrets/
+.amplify
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

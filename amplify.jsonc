@@ -1,0 +1,13 @@
+{
+  "name": "react-vite-omega",
+  "env": {
+    "production": {},
+    "preview": {}
+  },
+  "deploy": {
+    "install": "npm install",
+    "build": "npm run build",
+    "output_directory": "dist"
+  },
+  "backend": {}
+}
