@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { backend, friendlyError, type Todo } from './backend'
+import { backend, friendlyError, type Note, type Todo } from './backend'
 import './App.css'
 
 type User = { id: string; email: string; name?: string }
@@ -21,7 +21,10 @@ function App() {
       {checking ? (
         <p>Checking sign-in…</p>
       ) : user ? (
-        <TodoList user={user} onSignOut={() => setUser(null)} />
+        <>
+          <TodoList user={user} onSignOut={() => setUser(null)} />
+          <Notes />
+        </>
       ) : (
         <SignIn onSignedIn={setUser} />
       )}
@@ -190,3 +193,66 @@ function TodoList({ user, onSignOut }: { user: User; onSignOut: () => void }) {
 }
 
 export default App
+
+function Notes() {
+  const [notes, setNotes] = useState<Note[]>([])
+  const [body, setBody] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('notes')
+      .select('id, body, created_at')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setNotes((data as Note[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = body.trim()
+    if (!text) return
+    const { data, error } = await backend().from('notes').insert({ body: text }).select()
+    if (error) return setError(friendlyError(error))
+    setBody('')
+    setError('')
+    setNotes((n) => [...((data as Note[]) ?? []), ...n])
+  }
+
+  async function remove(note: Note) {
+    const { error } = await backend().from('notes').delete().eq('id', note.id)
+    if (error) return setError(friendlyError(error))
+    setNotes((n) => n.filter((x) => x.id !== note.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Notes</h2>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Write a note" value={body} onChange={(e) => setBody(e.target.value)} />
+        <button type="submit">Save</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : notes.length === 0 ? (
+        <p>No notes yet.</p>
+      ) : (
+        <ul className="todos">
+          {notes.map((note) => (
+            <li key={note.id}>
+              <span>{note.body}</span>
+              <button className="link" aria-label="Delete note" onClick={() => remove(note)}>
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}

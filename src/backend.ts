@@ -7,6 +7,12 @@ export type Todo = {
   created_at: string
 }
 
+export type Note = {
+  id: number
+  body: string
+  created_at: string
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let client: ReturnType<typeof createClient<any>> | undefined
 
@@ -24,7 +30,7 @@ const messages: Record<string, string> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: 'An account with that email already exists.',
   PASSWORD_TOO_SHORT: 'Use a password of at least 8 characters.',
   '42501': 'You are not allowed to do that. Try signing in again.',
-  PGRST205: 'The todos table is not available yet.',
+  PGRST205: 'That table is not available yet.',
 }
 
 export function friendlyError(error: { code?: string; message?: string } | null | undefined) {
