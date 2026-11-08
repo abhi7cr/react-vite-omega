@@ -5,7 +5,7 @@
     "preview": {}
   },
   "deploy": {
-    "install": "npm install",
+    "install": "npm ci",
     "build": "npm run build",
     "output_directory": "dist"
   },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { backend, friendlyError, type Note, type Todo } from './backend'
 import './App.css'
 
@@ -107,19 +107,17 @@ function TodoList({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async () => {
-    const { data, error } = await backend()
+  useEffect(() => {
+    backend()
       .from('todos')
       .select('id, title, completed, created_at')
       .order('created_at', { ascending: true })
-    setLoading(false)
-    if (error) return setError(friendlyError(error))
-    setTodos((data as Todo[]) ?? [])
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setTodos((data as Todo[]) ?? [])
+      })
   }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   async function add(e: FormEvent) {
     e.preventDefault()
