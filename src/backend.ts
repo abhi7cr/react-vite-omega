@@ -13,6 +13,13 @@ export type Note = {
   created_at: string
 }
 
+export type Habit = {
+  id: number
+  name: string
+  check_ins: number
+  created_at: string
+}
+
 export type Expense = {
   id: number
   description: string

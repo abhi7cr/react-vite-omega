@@ -6,6 +6,7 @@ import {
   type Bookmark,
   type Contact,
   type Expense,
+  type Habit,
   type Note,
   type Todo,
 } from './backend'
@@ -36,6 +37,7 @@ function App() {
           <Bookmarks />
           <Contacts />
           <Expenses />
+          <Habits />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -524,6 +526,91 @@ function Expenses() {
               >
                 Delete
               </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Habits() {
+  const [habits, setHabits] = useState<Habit[]>([])
+  const [name, setName] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('habits')
+      .select('id, name, check_ins, created_at')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setHabits((data as Habit[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = name.trim()
+    if (!text) return
+    const { data, error } = await backend().from('habits').insert({ name: text }).select()
+    if (error) return setError(friendlyError(error))
+    setName('')
+    setError('')
+    setHabits((h) => [...h, ...((data as Habit[]) ?? [])])
+  }
+
+  async function checkIn(habit: Habit) {
+    const { data, error } = await backend()
+      .from('habits')
+      .update({ check_ins: habit.check_ins + 1 })
+      .eq('id', habit.id)
+      .select()
+    if (error) return setError(friendlyError(error))
+    const updated = (data as Habit[] | null)?.[0]
+    if (updated) setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)))
+  }
+
+  async function remove(habit: Habit) {
+    const { error } = await backend().from('habits').delete().eq('id', habit.id)
+    if (error) return setError(friendlyError(error))
+    setHabits((h) => h.filter((x) => x.id !== habit.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Habits</h2>
+      <form className="row" onSubmit={add}>
+        <input placeholder="New habit" value={name} onChange={(e) => setName(e.target.value)} />
+        <button type="submit">Add</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : habits.length === 0 ? (
+        <p>No habits yet.</p>
+      ) : (
+        <ul className="todos">
+          {habits.map((habit) => (
+            <li key={habit.id}>
+              <span>
+                {habit.name} · {habit.check_ins} {habit.check_ins === 1 ? 'check-in' : 'check-ins'}
+              </span>
+              <span>
+                <button className="link" onClick={() => checkIn(habit)}>
+                  Check in
+                </button>
+                <button
+                  className="link"
+                  aria-label={`Delete ${habit.name}`}
+                  onClick={() => remove(habit)}
+                >
+                  Delete
+                </button>
+              </span>
             </li>
           ))}
         </ul>
