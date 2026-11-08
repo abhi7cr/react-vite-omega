@@ -13,6 +13,23 @@ export type Note = {
   created_at: string
 }
 
+export type Bookmark = {
+  id: number
+  title: string
+  url: string
+  created_at: string
+}
+
+// Only http(s) links are rendered, so a stored "javascript:" URL can't run script.
+export function isWebUrl(value: string) {
+  try {
+    const { protocol } = new URL(value)
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let client: ReturnType<typeof createClient<any>> | undefined
 

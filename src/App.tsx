@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { backend, friendlyError, type Note, type Todo } from './backend'
+import { backend, friendlyError, isWebUrl, type Bookmark, type Note, type Todo } from './backend'
 import './App.css'
 
 type User = { id: string; email: string; name?: string }
@@ -24,6 +24,7 @@ function App() {
         <>
           <TodoList user={user} onSignOut={() => setUser(null)} />
           <Notes />
+          <Bookmarks />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -245,6 +246,91 @@ function Notes() {
             <li key={note.id}>
               <span>{note.body}</span>
               <button className="link" aria-label="Delete note" onClick={() => remove(note)}>
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Bookmarks() {
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('bookmarks')
+      .select('id, title, url, created_at')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setBookmarks((data as Bookmark[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const link = url.trim()
+    if (!isWebUrl(link)) return setError('Enter a link that starts with http:// or https://.')
+    const { data, error } = await backend()
+      .from('bookmarks')
+      .insert({ title: title.trim() || link, url: link })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setTitle('')
+    setUrl('')
+    setError('')
+    setBookmarks((b) => [...((data as Bookmark[]) ?? []), ...b])
+  }
+
+  async function remove(bookmark: Bookmark) {
+    const { error } = await backend().from('bookmarks').delete().eq('id', bookmark.id)
+    if (error) return setError(friendlyError(error))
+    setBookmarks((b) => b.filter((x) => x.id !== bookmark.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Bookmarks</h2>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input
+          type="url"
+          placeholder="https://…"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+        />
+        <button type="submit">Save</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : bookmarks.length === 0 ? (
+        <p>No bookmarks yet.</p>
+      ) : (
+        <ul className="todos">
+          {bookmarks.map((bookmark) => (
+            <li key={bookmark.id}>
+              {isWebUrl(bookmark.url) ? (
+                <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
+                  {bookmark.title}
+                </a>
+              ) : (
+                <span>{bookmark.title}</span>
+              )}
+              <button
+                className="link"
+                aria-label={`Delete ${bookmark.title}`}
+                onClick={() => remove(bookmark)}
+              >
                 Delete
               </button>
             </li>
