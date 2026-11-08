@@ -13,6 +13,13 @@ export type Note = {
   created_at: string
 }
 
+export type Contact = {
+  id: number
+  name: string
+  email: string | null
+  created_at: string
+}
+
 export type Bookmark = {
   id: number
   title: string

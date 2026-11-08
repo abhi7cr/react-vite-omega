@@ -1,5 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { backend, friendlyError, isWebUrl, type Bookmark, type Note, type Todo } from './backend'
+import {
+  backend,
+  friendlyError,
+  isWebUrl,
+  type Bookmark,
+  type Contact,
+  type Note,
+  type Todo,
+} from './backend'
 import './App.css'
 
 type User = { id: string; email: string; name?: string }
@@ -25,6 +33,7 @@ function App() {
           <TodoList user={user} onSignOut={() => setUser(null)} />
           <Notes />
           <Bookmarks />
+          <Contacts />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -330,6 +339,89 @@ function Bookmarks() {
                 className="link"
                 aria-label={`Delete ${bookmark.title}`}
                 onClick={() => remove(bookmark)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Contacts() {
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('contacts')
+      .select('id, name, email, created_at')
+      .order('name', { ascending: true })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setContacts((data as Contact[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const { data, error } = await backend()
+      .from('contacts')
+      .insert({ name: trimmed, email: email.trim() || null })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setName('')
+    setEmail('')
+    setError('')
+    setContacts((c) =>
+      [...c, ...((data as Contact[]) ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+    )
+  }
+
+  async function remove(contact: Contact) {
+    const { error } = await backend().from('contacts').delete().eq('id', contact.id)
+    if (error) return setError(friendlyError(error))
+    setContacts((c) => c.filter((x) => x.id !== contact.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Contacts</h2>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <input
+          type="email"
+          placeholder="Email (optional)"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button type="submit">Save</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : contacts.length === 0 ? (
+        <p>No contacts yet.</p>
+      ) : (
+        <ul className="todos">
+          {contacts.map((contact) => (
+            <li key={contact.id}>
+              <span>
+                {contact.name}
+                {contact.email && <> · {contact.email}</>}
+              </span>
+              <button
+                className="link"
+                aria-label={`Delete ${contact.name}`}
+                onClick={() => remove(contact)}
               >
                 Delete
               </button>
