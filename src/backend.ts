@@ -13,6 +13,13 @@ export type Note = {
   created_at: string
 }
 
+export type Quote = {
+  id: number
+  body: string
+  author: string | null
+  created_at: string
+}
+
 export type Habit = {
   id: number
   name: string

@@ -7,6 +7,7 @@ import {
   type Contact,
   type Expense,
   type Habit,
+  type Quote,
   type Note,
   type Todo,
 } from './backend'
@@ -38,6 +39,7 @@ function App() {
           <Contacts />
           <Expenses />
           <Habits />
+          <Quotes />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -611,6 +613,81 @@ function Habits() {
                   Delete
                 </button>
               </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Quotes() {
+  const [quotes, setQuotes] = useState<Quote[]>([])
+  const [body, setBody] = useState('')
+  const [author, setAuthor] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('quotes')
+      .select('id, body, author, created_at')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setQuotes((data as Quote[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = body.trim()
+    if (!text) return
+    const { data, error } = await backend()
+      .from('quotes')
+      .insert({ body: text, author: author.trim() || null })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setBody('')
+    setAuthor('')
+    setError('')
+    setQuotes((q) => [...((data as Quote[]) ?? []), ...q])
+  }
+
+  async function remove(quote: Quote) {
+    const { error } = await backend().from('quotes').delete().eq('id', quote.id)
+    if (error) return setError(friendlyError(error))
+    setQuotes((q) => q.filter((x) => x.id !== quote.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Quotes</h2>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Quote" value={body} onChange={(e) => setBody(e.target.value)} required />
+        <input
+          placeholder="Author (optional)"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+        />
+        <button type="submit">Save</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : quotes.length === 0 ? (
+        <p>No quotes yet.</p>
+      ) : (
+        <ul className="todos">
+          {quotes.map((quote) => (
+            <li key={quote.id}>
+              <span>
+                “{quote.body}”{quote.author && <> — {quote.author}</>}
+              </span>
+              <button className="link" aria-label="Delete quote" onClick={() => remove(quote)}>
+                Delete
+              </button>
             </li>
           ))}
         </ul>
