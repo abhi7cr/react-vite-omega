@@ -5,6 +5,7 @@ import {
   isWebUrl,
   type Bookmark,
   type Contact,
+  type Expense,
   type Note,
   type Todo,
 } from './backend'
@@ -34,6 +35,7 @@ function App() {
           <Notes />
           <Bookmarks />
           <Contacts />
+          <Expenses />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -422,6 +424,103 @@ function Contacts() {
                 className="link"
                 aria-label={`Delete ${contact.name}`}
                 onClick={() => remove(contact)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+const currency = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' })
+
+function Expenses() {
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('expenses')
+      .select('id, description, amount, created_at')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setExpenses((data as Expense[]) ?? [])
+      })
+  }, [])
+
+  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = description.trim()
+    const value = Number(amount)
+    if (!text) return
+    if (!Number.isFinite(value) || value < 0) return setError('Enter an amount of 0 or more.')
+    const { data, error } = await backend()
+      .from('expenses')
+      .insert({ description: text, amount: Math.round(value * 100) / 100 })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setDescription('')
+    setAmount('')
+    setError('')
+    setExpenses((x) => [...((data as Expense[]) ?? []), ...x])
+  }
+
+  async function remove(expense: Expense) {
+    const { error } = await backend().from('expenses').delete().eq('id', expense.id)
+    if (error) return setError(friendlyError(error))
+    setExpenses((x) => x.filter((e) => e.id !== expense.id))
+  }
+
+  return (
+    <section className="card notes">
+      <div className="row">
+        <h2>Expenses</h2>
+        <strong>Total: {currency.format(total)}</strong>
+      </div>
+      <form className="row" onSubmit={add}>
+        <input
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
+        <input
+          type="number"
+          placeholder="0.00"
+          min="0"
+          step="0.01"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          required
+        />
+        <button type="submit">Add</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : expenses.length === 0 ? (
+        <p>No expenses yet.</p>
+      ) : (
+        <ul className="todos">
+          {expenses.map((expense) => (
+            <li key={expense.id}>
+              <span>
+                {expense.description} · {currency.format(Number(expense.amount))}
+              </span>
+              <button
+                className="link"
+                aria-label={`Delete ${expense.description}`}
+                onClick={() => remove(expense)}
               >
                 Delete
               </button>

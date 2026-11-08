@@ -13,6 +13,14 @@ export type Note = {
   created_at: string
 }
 
+export type Expense = {
+  id: number
+  description: string
+  // Postgres numeric comes back from the Data API as a string or number.
+  amount: number | string
+  created_at: string
+}
+
 export type Contact = {
   id: number
   name: string
