@@ -13,6 +13,13 @@ export type Note = {
   created_at: string
 }
 
+export type Recipe = {
+  id: number
+  name: string
+  prep_minutes: number | null
+  created_at: string
+}
+
 export type Book = {
   id: number
   title: string

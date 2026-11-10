@@ -9,6 +9,7 @@ import {
   type Habit,
   type Quote,
   type Book,
+  type Recipe,
   type Note,
   type Todo,
 } from './backend'
@@ -42,6 +43,7 @@ function App() {
           <Habits />
           <Quotes />
           <Books />
+          <Recipes />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -786,6 +788,95 @@ function Books() {
                 className="link"
                 aria-label={`Delete ${book.title}`}
                 onClick={() => remove(book)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Recipes() {
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [name, setName] = useState('')
+  const [minutes, setMinutes] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('recipes')
+      .select('id, name, prep_minutes, created_at')
+      .order('name', { ascending: true })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setRecipes((data as Recipe[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = name.trim()
+    if (!text) return
+    const prep = minutes.trim() ? Number(minutes) : null
+    if (prep !== null && (!Number.isInteger(prep) || prep <= 0)) {
+      return setError('Enter the prep time as a whole number of minutes.')
+    }
+    const { data, error } = await backend()
+      .from('recipes')
+      .insert({ name: text, prep_minutes: prep })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setName('')
+    setMinutes('')
+    setError('')
+    setRecipes((r) =>
+      [...r, ...((data as Recipe[]) ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+    )
+  }
+
+  async function remove(recipe: Recipe) {
+    const { error } = await backend().from('recipes').delete().eq('id', recipe.id)
+    if (error) return setError(friendlyError(error))
+    setRecipes((r) => r.filter((x) => x.id !== recipe.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Recipes</h2>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Recipe name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <input
+          type="number"
+          placeholder="Prep minutes"
+          min="1"
+          step="1"
+          value={minutes}
+          onChange={(e) => setMinutes(e.target.value)}
+        />
+        <button type="submit">Save</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : recipes.length === 0 ? (
+        <p>No recipes yet.</p>
+      ) : (
+        <ul className="todos">
+          {recipes.map((recipe) => (
+            <li key={recipe.id}>
+              <span>
+                {recipe.name}
+                {recipe.prep_minutes !== null && <> · {recipe.prep_minutes} min</>}
+              </span>
+              <button
+                className="link"
+                aria-label={`Delete ${recipe.name}`}
+                onClick={() => remove(recipe)}
               >
                 Delete
               </button>
