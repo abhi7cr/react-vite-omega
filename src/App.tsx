@@ -8,6 +8,7 @@ import {
   type Expense,
   type Habit,
   type Quote,
+  type Book,
   type Note,
   type Todo,
 } from './backend'
@@ -40,6 +41,7 @@ function App() {
           <Expenses />
           <Habits />
           <Quotes />
+          <Books />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -686,6 +688,105 @@ function Quotes() {
                 “{quote.body}”{quote.author && <> — {quote.author}</>}
               </span>
               <button className="link" aria-label="Delete quote" onClick={() => remove(quote)}>
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Books() {
+  const [books, setBooks] = useState<Book[]>([])
+  const [title, setTitle] = useState('')
+  const [author, setAuthor] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('books')
+      .select('id, title, author, is_read, created_at')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setBooks((data as Book[]) ?? [])
+      })
+  }, [])
+
+  const readCount = books.filter((b) => b.is_read).length
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = title.trim()
+    if (!text) return
+    const { data, error } = await backend()
+      .from('books')
+      .insert({ title: text, author: author.trim() || null })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setTitle('')
+    setAuthor('')
+    setError('')
+    setBooks((b) => [...b, ...((data as Book[]) ?? [])])
+  }
+
+  async function toggle(book: Book) {
+    const { error } = await backend()
+      .from('books')
+      .update({ is_read: !book.is_read })
+      .eq('id', book.id)
+    if (error) return setError(friendlyError(error))
+    setBooks((b) => b.map((x) => (x.id === book.id ? { ...x, is_read: !x.is_read } : x)))
+  }
+
+  async function remove(book: Book) {
+    const { error } = await backend().from('books').delete().eq('id', book.id)
+    if (error) return setError(friendlyError(error))
+    setBooks((b) => b.filter((x) => x.id !== book.id))
+  }
+
+  return (
+    <section className="card notes">
+      <div className="row">
+        <h2>Reading list</h2>
+        <span>
+          {readCount} of {books.length} read
+        </span>
+      </div>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+        <input
+          placeholder="Author (optional)"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+        />
+        <button type="submit">Add</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : books.length === 0 ? (
+        <p>No books yet.</p>
+      ) : (
+        <ul className="todos">
+          {books.map((book) => (
+            <li key={book.id} className={book.is_read ? 'done' : ''}>
+              <label>
+                <input type="checkbox" checked={book.is_read} onChange={() => toggle(book)} />
+                <span>
+                  {book.title}
+                  {book.author && <> · {book.author}</>}
+                </span>
+              </label>
+              <button
+                className="link"
+                aria-label={`Delete ${book.title}`}
+                onClick={() => remove(book)}
+              >
                 Delete
               </button>
             </li>

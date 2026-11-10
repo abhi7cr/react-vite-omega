@@ -13,6 +13,14 @@ export type Note = {
   created_at: string
 }
 
+export type Book = {
+  id: number
+  title: string
+  author: string | null
+  is_read: boolean
+  created_at: string
+}
+
 export type Quote = {
   id: number
   body: string
