@@ -10,6 +10,7 @@ import {
   type Quote,
   type Book,
   type Recipe,
+  type Movie,
   type Note,
   type Todo,
 } from './backend'
@@ -44,6 +45,7 @@ function App() {
           <Quotes />
           <Books />
           <Recipes />
+          <Movies />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -880,6 +882,94 @@ function Recipes() {
               >
                 Delete
               </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Movies() {
+  const [movies, setMovies] = useState<Movie[]>([])
+  const [title, setTitle] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('movies')
+      .select('id, title, rating, created_at')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setMovies((data as Movie[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = title.trim()
+    if (!text) return
+    const { data, error } = await backend().from('movies').insert({ title: text }).select()
+    if (error) return setError(friendlyError(error))
+    setTitle('')
+    setError('')
+    setMovies((m) => [...m, ...((data as Movie[]) ?? [])])
+  }
+
+  async function rate(movie: Movie, rating: number) {
+    // Clicking the current rating clears it.
+    const next = movie.rating === rating ? null : rating
+    const { error } = await backend().from('movies').update({ rating: next }).eq('id', movie.id)
+    if (error) return setError(friendlyError(error))
+    setMovies((m) => m.map((x) => (x.id === movie.id ? { ...x, rating: next } : x)))
+  }
+
+  async function remove(movie: Movie) {
+    const { error } = await backend().from('movies').delete().eq('id', movie.id)
+    if (error) return setError(friendlyError(error))
+    setMovies((m) => m.filter((x) => x.id !== movie.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Movies</h2>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Movie title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <button type="submit">Add</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : movies.length === 0 ? (
+        <p>No movies yet.</p>
+      ) : (
+        <ul className="todos">
+          {movies.map((movie) => (
+            <li key={movie.id}>
+              <span>{movie.title}</span>
+              <span>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    className="link"
+                    aria-label={`Rate ${movie.title} ${star} of 5`}
+                    aria-pressed={movie.rating === star}
+                    onClick={() => rate(movie, star)}
+                  >
+                    {movie.rating !== null && star <= movie.rating ? '★' : '☆'}
+                  </button>
+                ))}
+                <button
+                  className="link"
+                  aria-label={`Delete ${movie.title}`}
+                  onClick={() => remove(movie)}
+                >
+                  Delete
+                </button>
+              </span>
             </li>
           ))}
         </ul>

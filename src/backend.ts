@@ -13,6 +13,13 @@ export type Note = {
   created_at: string
 }
 
+export type Movie = {
+  id: number
+  title: string
+  rating: number | null
+  created_at: string
+}
+
 export type Recipe = {
   id: number
   name: string
