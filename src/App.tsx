@@ -3,6 +3,7 @@ import {
   backend,
   friendlyError,
   isWebUrl,
+  MOODS,
   type Bookmark,
   type Contact,
   type Expense,
@@ -13,6 +14,8 @@ import {
   type Movie,
   type Workout,
   type ShoppingItem,
+  type JournalEntry,
+  type Mood,
   type Note,
   type Todo,
 } from './backend'
@@ -50,6 +53,7 @@ function App() {
           <Movies />
           <Workouts />
           <Shopping />
+          <Journal />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -1177,6 +1181,100 @@ function Shopping() {
                 aria-label={`Delete ${item.name}`}
                 onClick={() => remove(item)}
               >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+const MOOD_LABELS: Record<Mood, string> = {
+  great: '😄 Great',
+  good: '🙂 Good',
+  okay: '😐 Okay',
+  bad: '🙁 Bad',
+}
+
+function Journal() {
+  const [entries, setEntries] = useState<JournalEntry[]>([])
+  const [body, setBody] = useState('')
+  const [mood, setMood] = useState<Mood>('okay')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('journal_entries')
+      .select('id, body, mood, created_at')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setEntries((data as JournalEntry[]) ?? [])
+      })
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = body.trim()
+    if (!text) return
+    const { data, error } = await backend()
+      .from('journal_entries')
+      .insert({ body: text, mood })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setBody('')
+    setMood('okay')
+    setError('')
+    setEntries((x) => [...((data as JournalEntry[]) ?? []), ...x])
+  }
+
+  async function remove(entry: JournalEntry) {
+    const { error } = await backend().from('journal_entries').delete().eq('id', entry.id)
+    if (error) return setError(friendlyError(error))
+    setEntries((x) => x.filter((e) => e.id !== entry.id))
+  }
+
+  return (
+    <section className="card notes">
+      <h2>Journal</h2>
+      <form className="row" onSubmit={add}>
+        <input
+          placeholder="How was your day?"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          required
+        />
+        <select
+          aria-label="Mood"
+          value={mood}
+          onChange={(e) => setMood(e.target.value as Mood)}
+        >
+          {MOODS.map((m) => (
+            <option key={m} value={m}>
+              {MOOD_LABELS[m]}
+            </option>
+          ))}
+        </select>
+        <button type="submit">Save</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : entries.length === 0 ? (
+        <p>No entries yet.</p>
+      ) : (
+        <ul className="todos">
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <span>
+                {MOOD_LABELS[entry.mood] ?? entry.mood} · {entry.body} ·{' '}
+                {new Date(entry.created_at).toLocaleDateString()}
+              </span>
+              <button className="link" aria-label="Delete entry" onClick={() => remove(entry)}>
                 Delete
               </button>
             </li>

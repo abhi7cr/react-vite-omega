@@ -13,6 +13,16 @@ export type Note = {
   created_at: string
 }
 
+export const MOODS = ['great', 'good', 'okay', 'bad'] as const
+export type Mood = (typeof MOODS)[number]
+
+export type JournalEntry = {
+  id: number
+  body: string
+  mood: Mood
+  created_at: string
+}
+
 export type ShoppingItem = {
   id: number
   name: string
