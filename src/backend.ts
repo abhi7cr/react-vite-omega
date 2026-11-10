@@ -13,6 +13,14 @@ export type Note = {
   created_at: string
 }
 
+export type ShoppingItem = {
+  id: number
+  name: string
+  quantity: number
+  bought: boolean
+  created_at: string
+}
+
 export type Workout = {
   id: number
   activity: string

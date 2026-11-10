@@ -12,6 +12,7 @@ import {
   type Recipe,
   type Movie,
   type Workout,
+  type ShoppingItem,
   type Note,
   type Todo,
 } from './backend'
@@ -48,6 +49,7 @@ function App() {
           <Recipes />
           <Movies />
           <Workouts />
+          <Shopping />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -1072,6 +1074,108 @@ function Workouts() {
                 className="link"
                 aria-label={`Delete ${workout.activity}`}
                 onClick={() => remove(workout)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function Shopping() {
+  const [items, setItems] = useState<ShoppingItem[]>([])
+  const [name, setName] = useState('')
+  const [quantity, setQuantity] = useState('1')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    backend()
+      .from('shopping_items')
+      .select('id, name, quantity, bought, created_at')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setItems((data as ShoppingItem[]) ?? [])
+      })
+  }, [])
+
+  const remaining = items.filter((i) => !i.bought).length
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = name.trim()
+    const qty = Number(quantity)
+    if (!text) return
+    if (!Number.isInteger(qty) || qty <= 0) return setError('Enter a quantity of 1 or more.')
+    const { data, error } = await backend()
+      .from('shopping_items')
+      .insert({ name: text, quantity: qty })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setName('')
+    setQuantity('1')
+    setError('')
+    setItems((i) => [...i, ...((data as ShoppingItem[]) ?? [])])
+  }
+
+  async function toggle(item: ShoppingItem) {
+    const { error } = await backend()
+      .from('shopping_items')
+      .update({ bought: !item.bought })
+      .eq('id', item.id)
+    if (error) return setError(friendlyError(error))
+    setItems((i) => i.map((x) => (x.id === item.id ? { ...x, bought: !x.bought } : x)))
+  }
+
+  async function remove(item: ShoppingItem) {
+    const { error } = await backend().from('shopping_items').delete().eq('id', item.id)
+    if (error) return setError(friendlyError(error))
+    setItems((i) => i.filter((x) => x.id !== item.id))
+  }
+
+  return (
+    <section className="card notes">
+      <div className="row">
+        <h2>Shopping list</h2>
+        <span>{remaining} to buy</span>
+      </div>
+      <form className="row" onSubmit={add}>
+        <input placeholder="Item" value={name} onChange={(e) => setName(e.target.value)} required />
+        <input
+          type="number"
+          aria-label="Quantity"
+          min="1"
+          step="1"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          required
+        />
+        <button type="submit">Add</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : items.length === 0 ? (
+        <p>Nothing on the list.</p>
+      ) : (
+        <ul className="todos">
+          {items.map((item) => (
+            <li key={item.id} className={item.bought ? 'done' : ''}>
+              <label>
+                <input type="checkbox" checked={item.bought} onChange={() => toggle(item)} />
+                <span>
+                  {item.name} × {item.quantity}
+                </span>
+              </label>
+              <button
+                className="link"
+                aria-label={`Delete ${item.name}`}
+                onClick={() => remove(item)}
               >
                 Delete
               </button>
