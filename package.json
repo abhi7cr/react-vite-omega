@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@aws-amplifygen3/backend-client-js": "^0.0.0-h87f78291",
+    "@aws-amplifygen3/backend-client-js": "^0.0.0-h1e3c657c",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
