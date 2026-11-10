@@ -11,6 +11,7 @@ import {
   type Book,
   type Recipe,
   type Movie,
+  type Workout,
   type Note,
   type Todo,
 } from './backend'
@@ -46,6 +47,7 @@ function App() {
           <Books />
           <Recipes />
           <Movies />
+          <Workouts />
         </>
       ) : (
         <SignIn onSignedIn={setUser} />
@@ -970,6 +972,109 @@ function Movies() {
                   Delete
                 </button>
               </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+function Workouts() {
+  const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [activity, setActivity] = useState('')
+  const [minutes, setMinutes] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [now] = useState(() => Date.now())
+
+  useEffect(() => {
+    backend()
+      .from('workouts')
+      .select('id, activity, minutes, created_at')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        setLoading(false)
+        if (error) return setError(friendlyError(error))
+        setWorkouts((data as Workout[]) ?? [])
+      })
+  }, [])
+
+  const weekMinutes = workouts
+    .filter((w) => now - new Date(w.created_at).getTime() < WEEK_MS)
+    .reduce((sum, w) => sum + w.minutes, 0)
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    const text = activity.trim()
+    const value = Number(minutes)
+    if (!text) return
+    if (!Number.isInteger(value) || value <= 0) {
+      return setError('Enter the duration as a whole number of minutes.')
+    }
+    const { data, error } = await backend()
+      .from('workouts')
+      .insert({ activity: text, minutes: value })
+      .select()
+    if (error) return setError(friendlyError(error))
+    setActivity('')
+    setMinutes('')
+    setError('')
+    setWorkouts((w) => [...((data as Workout[]) ?? []), ...w])
+  }
+
+  async function remove(workout: Workout) {
+    const { error } = await backend().from('workouts').delete().eq('id', workout.id)
+    if (error) return setError(friendlyError(error))
+    setWorkouts((w) => w.filter((x) => x.id !== workout.id))
+  }
+
+  return (
+    <section className="card notes">
+      <div className="row">
+        <h2>Workouts</h2>
+        <span>Last 7 days: {weekMinutes} min</span>
+      </div>
+      <form className="row" onSubmit={add}>
+        <input
+          placeholder="Activity"
+          value={activity}
+          onChange={(e) => setActivity(e.target.value)}
+          required
+        />
+        <input
+          type="number"
+          placeholder="Minutes"
+          min="1"
+          step="1"
+          value={minutes}
+          onChange={(e) => setMinutes(e.target.value)}
+          required
+        />
+        <button type="submit">Log</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {loading ? (
+        <p>Loading…</p>
+      ) : workouts.length === 0 ? (
+        <p>No workouts yet.</p>
+      ) : (
+        <ul className="todos">
+          {workouts.map((workout) => (
+            <li key={workout.id}>
+              <span>
+                {workout.activity} · {workout.minutes} min ·{' '}
+                {new Date(workout.created_at).toLocaleDateString()}
+              </span>
+              <button
+                className="link"
+                aria-label={`Delete ${workout.activity}`}
+                onClick={() => remove(workout)}
+              >
+                Delete
+              </button>
             </li>
           ))}
         </ul>

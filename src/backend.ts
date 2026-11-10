@@ -13,6 +13,13 @@ export type Note = {
   created_at: string
 }
 
+export type Workout = {
+  id: number
+  activity: string
+  minutes: number
+  created_at: string
+}
+
 export type Movie = {
   id: number
   title: string
